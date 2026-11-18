@@ -9,9 +9,11 @@ python3 tools/test_probe_signals.py
 
 ## Native payload
 
-If you need the toolchain for a native build, the [QNX SDP 6.5 archive](https://archive.org/details/qnxsdp-65.7z) includes the SDK and a license key generator, according to the archive listing.
+If you need the toolchain for a native build, the [QNX SDP 6.5 tree](https://github.com/RunzeJustin/qnx650) on GitHub contains the SDK with ARM GCC 4.4.2. The previous archive.org link (`qnxsdp-65.7z`) has been removed.
 
-1. Prepare a licensed QNX SDP 6.5 Linux x86 toolchain with ARM GCC 4.4.2. Set `QNX_HOST`, `QNX_TARGET`, and `QNX_CONFIGURATION` if your installation differs from the paths in `native/build.sh`.
+For a license-free build using the EABI GCC directly (bypassing `qcc`), see [`native/Dockerfile.glass`](../../source/native/Dockerfile.glass) and [`native/build_glass.sh`](../../source/native/build_glass.sh) which use `arm-unknown-nto-qnx6.5.0eabi-gcc-4.4.2` in a Docker container.
+
+1. Prepare a QNX SDP 6.5 Linux x86 toolchain with ARM GCC 4.4.2. Clone the toolchain: `git clone --depth 1 https://github.com/RunzeJustin/qnx650.git native/qnx650`. Set `QNX_HOST`, `QNX_TARGET`, and `QNX_CONFIGURATION` if your installation differs from the paths in `native/build.sh`.
 
 ```sh
 mkdir -p native/frameworks
