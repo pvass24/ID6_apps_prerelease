@@ -242,7 +242,7 @@ The iDrive 6 HMI redraws the screen at **10 frames per second** regardless of ho
 Our fork includes the [PR #50 fix](https://github.com/inotbarnacle/ID6_apps_prerelease/pull/50): BoostDeck and ShiftDeck **stop polling when you navigate away** from their screen. This is critical for our larger arc PNGs — without it, the plugin keeps swapping 260×260 images in the background, wasting memory. When you return to the app, polling restarts instantly.
 
 ### NBT-AAD (Android Auto) Conflict
-If you have aftermarket Android Auto (NBTAAD) installed on your head unit, it may cause BoostDeck to freeze ([issue #27](https://github.com/inotbarnacle/ID6_apps_prerelease/issues/27)). The system profiler script checks for this. If NBTAAD is running, stop it before using custom apps.
+If you have aftermarket Android Auto (NBTAAD) installed on your head unit, it may cause BoostDeck to freeze ([issue #27](https://github.com/inotbarnacle/ID6_apps_prerelease/issues/27)). The system profiler script checks for this. If NBTAAD is running, stop it before using custom apps. **Apple CarPlay is NOT affected** — it's native BMW software, not a third-party daemon.
 
 ### RAM
 The developer's personal unit has **2GB RAM** (described as "low ram"). Most NBT Evo units have 2-4GB. The profiler script reports your exact amount. ZIP size recommendations:
