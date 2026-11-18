@@ -1,113 +1,134 @@
-# S63 V8 Signal Probe Plan — 2019 F90 M5 Competition
+# S63 V8 Signal Map — 2019 F90 M5 Competition
 
-## Prerequisites
-- ENET cable connected (OBD2 → laptop Ethernet)
-- Car parked, ignition ON, engine running (for live signal readings)
-- SSH enabled via Bavarian SSH Client
-- Python 3 on laptop
+## Known S63 DIDs (Community Verified)
 
-## Step 1: Verify Head Unit Compatibility
+Source: [Nekocorp S63 PID database](https://git.nekocorp.fr/leo/bmw_pid_data/src/branch/master/s63_pid_data.csv), [obd-gauge-cluster BMW-STATUS](https://github.com/cheeseprince/obd-gauge-cluster/blob/main/docs/BMW-STATUS.md)
 
-```bash
-cd /Users/patrickvassell/Projects/ID6_apps_prerelease/source
+### BoostDeck Gauges — S63 Mapping
 
-# Run the capture utility (replace IP with your head unit's SSH IP)
-python3 tools/capture_headunit.py \
-  --head 169.254.X.X \
-  --out ~/m5_capture \
-  --include-frameworks \
-  --legacy
-```
+| Gauge | B58 DID | S63 DID | S63 Conversion | Notes |
+|-------|---------|---------|----------------|-------|
+| **Boost pressure** | 4205 | **4205** | unsigned int × 0.078125 = hPa | SAME DID, different scale (B58 uses ÷128 for kPa, S63 uses ×0.078125 for hPa) |
+| **Ambient pressure** | 4201 | **4201** | unsigned int × 0.0390625 = hPa | SAME DID, different scale |
+| **Coolant temp** | 4300 | **4300** | unsigned char × 0.75 − 48 = °C | SAME DID, SAME formula |
+| **Oil temperature** | (none) | **4402** | unsigned int × 0.75 − 48 = °C | NEW — oil temp after filter. B58 used 586F for oil PRESSURE |
+| **Oil pressure** | 586F | **4436** | unsigned int × 1 = hPa (absolute) | DIFFERENT DID and unit (hPa not bar) |
+| **Intake air temp** | 580F | **TBD** | Probe needed | May use same DID or different |
+| **Trans temp** | DA12 (EGS) | **4650** | unsigned char × 0.75 − 48 = °C | Available from DME directly on S63! No need to query EGS separately |
+| **Rail pressure** | 56D7 | **TBD** | Probe needed | May use same DID |
+| **AFR / Lambda** | 5889 | **4702** | unsigned int × 0.00048828 = V (probe voltage) | Different approach — raw probe voltage, not lambda directly |
+| **Ignition timing** | 4A49 | **TBD** | Probe per-cylinder DIDs exist | S63 has per-cylinder timing |
 
-This pulls: firmware version, display resolution, framework SHA-256 hashes, split-node detection.
+### Additional S63-Specific Gauges Available
 
-## Step 2: Probe B58 DIDs Against S63 DME
+| DID | Description | Conversion | Useful for |
+|-----|-------------|------------|------------|
+| **4807** | Engine speed | unsigned int × 0.25 = RPM | Alternative to OBD 01 0C |
+| **4808** | Target idle speed | unsigned int × 0.25 = RPM | Diagnostic |
+| **4520** | Effective engine power | unsigned int × 0.01525879 | Power gauge! |
+| **4521** | Fuel mass flow | unsigned int × 0.1 = kg/h | Fuel consumption |
+| **4425** | Oil sump temperature | signed int × 0.1 = °C | More accurate than 4402 |
+| **4408** | Oil temp unfiltered | signed int × 0.1 = °C | Fastest response |
+| **4651** | Wastegate duty cycle | unsigned int × 0.00152588 = % | Turbo health |
+| **4536** | Boost control difference bank 1 | signed int × 0.125 = hPa | Boost leak detection |
+| **480B** | Accelerator pedal | unsigned int × 0.0015259 = % | Throttle position |
+| **4600** | Throttle valve angle | signed int × 0.02441406 = % | Actual throttle |
+| **460A** | Battery voltage | unsigned int × 0.015 = V | Electrical |
+| **4682** | Gearbox speed sensor | signed int × 0.5 = RPM | Trans |
 
-Test all 8 B58 gauge DIDs to see which the S63 responds to:
+### Standard OBD PIDs (Universal — Work on ALL BMWs)
 
+| PID | Description | Conversion |
+|-----|-------------|------------|
+| 01 0C | Engine RPM | 2 bytes ÷ 4 |
+| 01 0D | Vehicle speed | 1 byte = km/h |
+| 01 05 | Coolant temp | 1 byte − 40 = °C |
+| 01 0F | Intake air temp | 1 byte − 40 = °C |
+| 01 0B | Intake manifold pressure | 1 byte = kPa |
+
+## Key Differences: S63 vs B58
+
+1. **Boost scaling is different**: B58 uses ÷128 for kPa, S63 uses ×0.078125 for hPa. Same DID (4205), different math.
+2. **Oil temp exists** (DID 4402) — B58 BoostDeck showed oil PRESSURE, S63 has both oil temp AND pressure.
+3. **Trans temp from DME**: S63 reports trans temp at DID 4650 directly from the DME. No need to query the EGS (ECU 18) separately. This is simpler and works over MOST fallback.
+4. **Oil pressure is in hPa** at DID 4436, not bar like B58's 586F. Conversion: hPa ÷ 1000 = bar.
+5. **Lambda probe is raw voltage** (4702) not direct lambda (5889). Need to convert: V → lambda via Nernst equation, or just display voltage.
+6. **Engine power is available** (DID 4520) — could add a kW/hp gauge!
+
+## Probe Commands (When at the Car)
+
+### Step 1: Verify Known S63 DIDs
 ```bash
 python3 tools/probe_signals.py \
   --local 169.254.10.2 \
   --gateway 169.254.10.3 \
   --ecu 12 \
-  224205 224201 225889 224A49 22580F 2256D7 22586F 224300
+  224205 224201 224300 224402 224436 224650 224807 224520
 ```
 
-Expected outcomes per DID:
-| DID | Gauge | Likely S63 Result |
-|-----|-------|-------------------|
-| 4205 | Absolute boost (kPa) | May respond — common across platforms |
-| 4201 | Ambient pressure (kPa) | May respond — common |
-| 5889 | AFR / Lambda | Unknown — may use different DID |
-| 4A49 | Ignition timing | Unknown |
-| 580F | Intake air temp | Possibly — common sensor format |
-| 56D7 | Rail pressure | Unknown — different fuel system |
-| 586F | Oil pressure | Unknown |
-| 4300 | Coolant temp | Possibly — common format |
+Expected: all should return positive (62 XX XX ...) responses.
 
-Also test OBD standard PIDs (these should work universally):
-
+### Step 2: Test B58 DIDs That May Also Work on S63
 ```bash
 python3 tools/probe_signals.py \
   --local 169.254.10.2 \
   --gateway 169.254.10.3 \
   --ecu 12 \
-  010C 010D 0105
+  225889 224A49 22580F 2256D7 22586F
 ```
 
-- 01 0C = RPM (should work)
-- 01 0D = Speed (should work)
-- 01 05 = Coolant temp via OBD (should work)
+These are B58-specific — some may respond on S63, some won't.
 
-## Step 3: Probe EGS (Transmission) 
-
-The ZF 8HP is shared between B58 and S63:
-
+### Step 3: Standard OBD (Should All Work)
 ```bash
 python3 tools/probe_signals.py \
   --local 169.254.10.2 \
   --gateway 169.254.10.3 \
-  --ecu 18 \
-  22DA12
+  --ecu 12 \
+  010C 010D 0105 010F 010B
 ```
 
-- DA12 = Transmission temp — should work (same ZF 8HP76)
-
-## Step 4: Record and Validate
-
-For every DID that returns a positive reply (starts with `62`):
+### Step 4: Record & Validate
+For every DID that returns a positive reply:
 1. Record the raw hex response
-2. Compare the decoded value against a known reference (ISTA, MHD, OBD scanner)
-3. Validate the conversion formula from SIGNALS.md works
-4. If the value doesn't match, the DID responds but uses different scaling
+2. Apply the conversion formula from the table above
+3. Compare against a known reference (dashboard display, MHD, OBD scanner)
+4. If the value makes sense → confirmed for use
 
-For rejected DIDs (returns `7f 22 31`):
-- These need S63-specific DID discovery
-- Common S63 DIDs to try (from BMW ISTA documentation):
-  - Boost: 4202, 4203, 4206, 4207
-  - Lambda bank 1/2: 5886, 5887, 5888
-  - Oil temp: 5850, 5860
-  - Charge air: 580E, 5810
+## C Code Changes for S63 Support
 
-## Step 5: Build S63 Signal Profile
+Once DIDs are verified, modify these files:
 
-Once validated DIDs are found, the changes go in two files:
-
-**collector.c** (line ~366) — update DID array:
+**collector.c (line ~366)** — update the DID array:
 ```c
-// Gate by ECU identification so B58 profile is preserved
-const unsigned dids[] = {0x4201, 0x4205, ...S63 replacements...};
+const unsigned dids[] = {
+    0x4201,  // ambient pressure (same as B58)
+    0x4205,  // boost pressure (same DID, different scale)
+    0x4702,  // lambda probe voltage (was 0x5889 on B58)
+    0x4A49,  // ignition timing (probe to verify)
+    0x580F,  // intake air temp (probe to verify)
+    0x4650,  // trans temp from DME (was 0xDA12 on EGS)
+    0x56D7,  // rail pressure (probe to verify)
+    0x4436,  // oil pressure in hPa (was 0x586F on B58)
+    0x4300,  // coolant temp (same as B58)
+};
 ```
 
-**gauge_core.c** (`bd_decode_did` function) — add S63 decoders if scaling differs:
+**gauge_core.c** — update `bd_decode_did()`:
 ```c
-case 0xNEW_DID: x = raw * NEW_FACTOR; lo = X; hi = Y; break;
+case 0x4436: // S63 oil pressure in hPa → bar
+    x = r / 1000.0; lo = 0; hi = 20; break;
+case 0x4650: // S63 trans temp from DME
+    x = r * 0.75 - 48; lo = -48; hi = 180; break;
+case 0x4402: // S63 oil temp (could add as extra gauge)
+    x = r * 0.75 - 48; lo = -48; hi = 180; break;
 ```
 
-## Notes
-- probe_signals.py is READ ONLY — no writes to any ECU
-- Max 12 requests per run
-- 200ms spacing between requests
-- Separate TCP connection per request (prevents cross-contamination)
-- Engine should be running for meaningful boost/AFR/timing readings
-- Engine OFF for trans temp (so trans is at a known state)
+## Bonus: Gauges Only Available on S63
+
+With the S63 DID database, we could add gauges that the B58 BoostDeck doesn't have:
+- **Engine Power (kW)** — DID 4520
+- **Oil Sump Temperature** — DID 4425
+- **Wastegate Duty Cycle** — DID 4651 (turbo health indicator)
+- **Throttle Position** — DID 4600
+- **Battery Voltage** — DID 460A
