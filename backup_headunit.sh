@@ -84,23 +84,16 @@ for lib in libAppFramework.A.so libCoreFramework.A.so; do
     fi
 done
 
-# Existing plugins
+# Existing plugins — copy entire tree via tar (avoids path traversal from remote filenames)
 echo "[5/8] Backing up existing plugins..."
 mkdir -p "$BACKUP_DIR/plugins"
-PLUGIN_LIST=$($SSH_CMD 'ls /var/opt/hmi/data/ID5/Plugins/ 2>/dev/null' || echo "")
-if [ -z "$PLUGIN_LIST" ]; then
+$SSH_CMD 'cd /var/opt/hmi/data/ID5/Plugins 2>/dev/null && tar cf - . 2>/dev/null' | tar xf - --no-absolute-names -C "$BACKUP_DIR/plugins" 2>/dev/null || true
+PLUGIN_COUNT=$(find "$BACKUP_DIR/plugins" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+if [ "$PLUGIN_COUNT" = "0" ]; then
     echo "  No existing plugins found (clean install)"
 else
-    echo "  Found plugins: $PLUGIN_LIST"
-    for plugin in $PLUGIN_LIST; do
-        echo "  Backing up: $plugin"
-        mkdir -p "$BACKUP_DIR/plugins/$plugin"
-        # Get file list first
-        files=$($SSH_CMD "ls /var/opt/hmi/data/ID5/Plugins/$plugin/ 2>/dev/null" || echo "")
-        for f in $files; do
-            $SSH_CMD "cat /var/opt/hmi/data/ID5/Plugins/$plugin/$f" > "$BACKUP_DIR/plugins/$plugin/$f" 2>/dev/null || true
-        done
-    done
+    echo "  Backed up $PLUGIN_COUNT plugin folder(s):"
+    ls "$BACKUP_DIR/plugins/" 2>/dev/null | while read -r p; do echo "    $p"; done
 fi
 
 # HMI configuration
