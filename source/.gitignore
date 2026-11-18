@@ -8,6 +8,17 @@
 /native/frameworks/
 /native/runtime/
 /native/plugin/*_ALL_Images.zip
+/native/qnx650/
+/native/qnx-toolchain/
+/native/plugin/preview_*.png
+/native/plugin/mockup_*.png
+/native/plugin/concept*.png
+/native/plugin/hud_*.png
+/native/plugin/shiftdeck_*.png
+/native/plugin/codes_*.png
+/native/plugin/polished_*.png
+/native/plugin/hybrid_*.png
+/native/plugin/smooth_*.gif
 __pycache__/
 .venv/
 .DS_Store

@@ -1,0 +1,19 @@
+FROM --platform=linux/amd64 ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y \
+    python3 python3-pip make file \
+    libc6:i386 libncurses5:i386 libstdc++6:i386 zlib1g:i386 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install Pillow
+
+ENV QNX_HOST=/opt/qnx650/host/linux/x86
+ENV QNX_TARGET=/opt/qnx650/target/qnx6
+ENV QNX_CONFIGURATION=/etc/qnx
+ENV PATH="${QNX_HOST}/usr/bin:${PATH}"
+
+RUN mkdir -p /etc/qnx
+
+WORKDIR /build
