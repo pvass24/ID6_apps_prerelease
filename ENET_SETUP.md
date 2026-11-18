@@ -25,8 +25,17 @@ The ENET connection uses link-local addresses (169.254.x.x). macOS should auto-c
 
 The head unit will be at 169.254.10.3 (the diagnostic gateway) or similar. Bavarian SSH Client will tell you the exact IP.
 
-### 3. Disable WiFi (important!)
-When you connect the ENET cable at the car, **turn WiFi OFF** on your Mac. macOS can get confused routing traffic when both WiFi and Ethernet are active. If you need internet, use your phone hotspot AFTER the ENET setup is confirmed working.
+### 3. Disable WiFi initially, re-enable after verifying ENET
+Turn WiFi OFF before connecting the ENET cable — this prevents macOS routing confusion during initial setup.
+
+Once ENET is working (you can ping the head unit), turn WiFi back ON so you can use Claude Code / internet on the same laptop. Then verify the car route didn't break:
+```bash
+route get 169.254.10.3
+# Must show: interface: en8 (your USB Ethernet)
+# If it shows en0 (WiFi), the route is wrong — turn WiFi off again
+```
+
+If the route is correct (`en8`), both connections work simultaneously — car on Ethernet, internet on WiFi.
 
 ## At the Car
 
