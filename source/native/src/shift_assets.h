@@ -8,5 +8,5 @@ static const unsigned kDigitWarn = 55902u;
 static const unsigned kMarkBase = 55920u;
 static const unsigned kShiftOff = 55914u;
 static const unsigned kShiftOn = 55915u;
-static const unsigned kDefaultTarget = 3u;
+static const unsigned kDefaultTarget = 1u;
 static const unsigned kShiftTargets[] = {6200, 6500, 6700, 7000, 7200};
