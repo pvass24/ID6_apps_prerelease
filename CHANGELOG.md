@@ -1,5 +1,8 @@
 # Change notes
 
+- **MOST fallback** covers Bootmod3 map switching, Exhaust Flap and Active Sound, plus the dedicated Exhaust Flap submenu in MHD+ Suite. Bootmod3 burble presets and xDrive still require HSFZ.
+- **Desktop installers v0.7.1 beta** embed both rebuilt workers.
+
 - **BoostDeck** has faster gauge updates, a new layout, an Active Ethanol gauge, and metric measurements under OPTIONS.
 - **ShiftDeck** performance improvements.
 - **MHD+ Suite** groups map switching, exhaust flap control, and Max Cooling. The new Max Cooling tiles show the last request accepted by the DME.

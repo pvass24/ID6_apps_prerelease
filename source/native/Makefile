@@ -31,6 +31,12 @@ build/mhd-maps: $(WORKER) | build
 build/engine-codes: $(WORKER) | build
 	$(HOST_LINK) -DENGINE_CODES_ONLY $(filter %.c,$^) -lm -o $@
 
+build/bootmod3: $(WORKER) src/controls.c src/bm3_profiles.h | build
+	$(HOST_LINK) -DBM3_ONLY $(filter-out src/controls.c,$(filter %.c,$^)) -lm -o $@
+
+build/exhaust-flap: $(WORKER) | build
+	$(HOST_LINK) -DEXHAUST_FLAP_ONLY $(filter %.c,$^) -lm -o $@
+
 build/test-core: tests/test_core.c $(CORE) $(HEADERS) | build
 	$(CC) $(CFLAGS) -Isrc $(filter %.c,$^) -lm -o $@
 
@@ -40,7 +46,7 @@ build/test-most: tests/test_most.c $(MOST) $(FAKE_DSI) $(MOST_HEADERS) | build
 build/test-diag-link: tests/test_diag_link.c $(CORE_LINK) $(MOST) tests/fake_most_env.c $(FAKE_DSI) $(HEADERS) $(MOST_HEADERS) | build
 	$(HOST_LINK) $(filter %.c,$^) -lm -o $@
 
-test: build/boostdeck-collector build/shift-deck build/mhd-maps build/engine-codes build/test-core build/test-most build/test-diag-link
+test: build/boostdeck-collector build/shift-deck build/mhd-maps build/engine-codes build/test-core build/test-most build/test-diag-link build/bootmod3 build/exhaust-flap
 	./build/test-core
 	./build/test-most
 	./build/test-diag-link

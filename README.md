@@ -26,6 +26,8 @@ Choose **MHD+ Suite** or **Bootmod3 Suite**. [Download the dashboard package](pa
 - **Bootmod3 Suite** is a new beta control menu for compatible CustomROM tunes. It offers four map slots, exhaust flap control, Active Sound, and burble presets.
 - **xDrive Control (experimental)** temporarily selects rear-wheel drive on supported DSC versions. **The engine must be off before switching from AWD to RWD or from RWD to AWD.**
 - **Engine Fault Codes** reads engine/DME fault codes and shows descriptions when available. It can read codes even when the DME refuses to clear them.
+- **Road Jet**. A simple game that makes a jet move based on throttle input and steering angle. [Road Jet package](packages/road-jet.zip)
+- **BEAMer** offers Front, Rear, Both, and Insane lighting patterns in Park at zero speed. Tested on an F3x car. Other Fxx cars may work if they have the supported lighting module. Gxx has not been tested. [BEAMer package](packages/beamer.zip)
 - **HUD Gauges** projects a live curved tachometer and numeric boost in PSI onto the factory windshield HUD. The tach spans 0–8,000 RPM, with a thicker redline zone starting at 6,700 RPM. Enable **My Vehicle → HUD Gauges → Show HUD gauges** to keep the display on after leaving the menu and restore it at the next boot. Uncheck it to clear the display. The overlay yields when it detects factory navigation guidance. [HUD Gauges package](packages/hud-gauges.zip)
 
 ## Screenshots from iDrive
@@ -42,6 +44,10 @@ Choose **MHD+ Suite** or **Bootmod3 Suite**. [Download the dashboard package](pa
   <tr>
     <td><img src="images/05-max-cooling.png" alt="Max Cooling on iDrive" width="300"><br>Max Cooling</td>
     <td><img src="images/06-engine-fault-codes.png" alt="Engine Fault Codes on iDrive" width="300"><br>Engine Fault Codes</td>
+  </tr>
+  <tr>
+    <td><img src="images/07-road-jet.png" alt="Road Jet on iDrive" width="300"><br>Road Jet</td>
+    <td><img src="images/08-beamer.png" alt="BEAMer on iDrive" width="300"><br>BEAMer</td>
   </tr>
 </table>
 

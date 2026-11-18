@@ -50,7 +50,8 @@ int most_fake_bind(void)
     atexit(report);
     if (!strcmp(mode, "no-server")) { fake_dme_start(FAKE_NO_SERVER); return 0; }
     if (strcmp(mode, "up") && strcmp(mode, "drop") && strcmp(mode, "mhd-refuse") &&
-        strcmp(mode, "codes-512") && strcmp(mode, "codes-513")) return -1;
+        strcmp(mode, "codes-512") && strcmp(mode, "codes-513") &&
+        strcmp(mode, "bm3-unknown")) return -1;
     fake_dme_start(FAKE_UP);
     if (delay && atoi(delay) > 0 && atoi(delay) <= 2000) fake_dme_hold_ms(atoi(delay));
     if (!strcmp(mode, "drop")) fake_dme_drop_link_after(5);
@@ -66,6 +67,24 @@ int most_fake_bind(void)
         echo[2] = (uint8_t)i;
         snprintf(hex, sizeof hex, "2F01%02X", i);
         fake_dme_raw(hex, echo, sizeof echo);
+    }
+    {
+        static const uint8_t define[] = {0x6c, 0x02, 0xf3, 0x01};
+        static const uint8_t map[] = {0x7d}, map_read[] = {0x63, 1};
+        static const uint8_t sound[] = {0x6e, 0x5f, 0xfd};
+        static const uint8_t flap_auto[] = {0x6f, 0x60, 0xfd, 0};
+        static const uint8_t flap_adjust[] = {0x6f, 0x60, 0xfd, 3};
+        uint8_t rom[258] = {0x62, 0xf3, 0x01};
+        const char *profile = !strcmp(mode, "bm3-unknown") ? "BM3_R #UNKNOWN" : "BM3_R #011000";
+        memcpy(rom + 3, profile, strlen(profile));
+        fake_dme_raw("2C02F30124807FFE5000FF", define, sizeof define);
+        fake_dme_raw("22F301", rom, sizeof rom);
+        fake_dme_raw("3D14D001D006020101", map, sizeof map);
+        fake_dme_raw("2314D001D00601", map_read, sizeof map_read);
+        fake_dme_raw("2E5FFD00", sound, sizeof sound);
+        fake_dme_raw("2F60FD00", flap_auto, sizeof flap_auto);
+        fake_dme_raw("2F60FD0314FE", flap_adjust, sizeof flap_adjust);
+        fake_dme_raw("2F60FD032328", flap_adjust, sizeof flap_adjust);
     }
     fake_dme_raw("1902AF", codes, sizeof codes);
     fake_dme_raw("14FFFFFF", cleared, sizeof cleared);

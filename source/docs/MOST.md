@@ -1,6 +1,6 @@
 # MOST fallback
 
-On some cars the head unit has no route to the HSFZ diagnostic gateway. Without it the workers cannot connect, so the gauges stay blank and map or code requests fail. Every worker can then reach the DME through the head unit's own UDS tunnel over MOST.
+On some cars the head unit has no route to the HSFZ diagnostic gateway. Without it the workers cannot connect, so the gauges stay blank and map or code requests fail. Workers with fallback can then reach the DME through the head unit's own UDS tunnel over MOST.
 
 ## Workers
 
@@ -21,7 +21,15 @@ Bootmod3 (`bootmod3-qnx`) and xDrive (`xdrive-control-qnx`) stay on HSFZ. They w
 - A failed MOST open is closed. A loop worker goes back to HSFZ and tries MOST again after 30 s. For a one-shot worker the failure is final.
 - Once on MOST, a worker stays there until it is restarted. If the tunnel drops, a loop worker exits and the plugin starts a new one.
 
-Every worker takes `--transport auto|hsfz|most`. `auto` is the default, `hsfz` never uses MOST, and `most` ignores `--host`.
+The diagnostic workers use automatic fallback by default where supported. The dashboard workers accept a transport override for testing.
+
+## Packaged controls
+
+- **Bootmod3 Suite** can switch maps, request exhaust flap position, and set Active Sound over MOST on a recognized CustomROM. Burble presets require HSFZ because the complete write is larger than the tunnel limit.
+- **MHD+ Suite → Options → Exhaust Flap** uses the same DME commands as the previous worker and falls back through MOST when the HSFZ connection fails.
+- **xDrive Control** requires HSFZ for DSC, transfer case and transmission diagnostics. The shared MOST tunnel reaches only the DME.
+
+The workers switch transport before sending a control request. A rejected or unconfirmed request is reported to the menu.
 
 ## What goes over MOST
 

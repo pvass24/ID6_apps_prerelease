@@ -35,6 +35,7 @@ cxx -DPERF_LAB -Isrc -Isdk -O2 -fno-exceptions -fPIC -shared -DNATIVE_SHIFT_SMOO
     "$frameworks/libAppFramework.A.so" "$frameworks/libCoreFramework.A.so" -Lout -lm -lsocket \
     -Wl,--allow-shlib-undefined -Wl,-soname,libShiftDeck.so -o out/libShiftDeck.so
 worker -DPERF_LAB -DMHD_MAPS_ONLY src/collector.c src/gauge_core.c -o out/mhd-maps-qnx
+worker -DEXHAUST_FLAP_ONLY src/collector.c out/core.o -o out/exhaust-flap-worker-qnx
 worker -DNATIVE_FAST -DSHIFT_DECK_ONLY src/collector.c out/core.o -o out/shift-deck-qnx
 c -O2 -static fileops.c -o out/gaugedeck-fileops
 c -O2 src/exhaust_flap_launcher.c -lsocket -o out/exhaust-flap-qnx
@@ -52,3 +53,11 @@ for app in Bootmod3Suite XDriveControl; do
         "$frameworks/libAppFramework.A.so" "$frameworks/libCoreFramework.A.so" -Lout -lsocket \
         -Wl,--allow-shlib-undefined "-Wl,-soname,lib$app.so" -o "out/lib$app.so"
 done
+cxx -Isrc -Isdk -O2 -fno-exceptions -fPIC -shared src/light_show.cpp \
+    "$frameworks/libAppFramework.A.so" "$frameworks/libCoreFramework.A.so" -Lout \
+    -Wl,--allow-shlib-undefined -Wl,-soname,libBEAMer.so -o out/libBEAMer.so
+worker src/beamer_worker.c out/core.o -o out/beamer-qnx
+cxx -Isrc -Isdk -O2 -fno-exceptions -fPIC -shared src/road_jet.cpp out/core.o \
+    "$frameworks/libAppFramework.A.so" "$frameworks/libCoreFramework.A.so" -Lout -lm -lsocket \
+    -Wl,--allow-shlib-undefined -Wl,-soname,libRoadJet.so -o out/libRoadJet.so
+worker src/road_jet_worker.c out/core.o -o out/road-jet-qnx

@@ -58,6 +58,48 @@ def hold_lease(seconds):
     return thread
 
 
+class ControlsMostTest(unittest.TestCase):
+    def disconnected(self, worker, args, fake="up"):
+        # Reserve a local TCP port without listening so connect fails predictably.
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = str(sock.getsockname()[1])
+            return run(worker, ["--host", "127.0.0.1", *args, "--port", port], fake)
+
+    def test_bootmod3_fallback_short_commands(self):
+        for args, message in [
+            (["--map", "2"], "Map 2 verified by DME readback."),
+            (["--sound", "1"], "Active Sound request accepted by DME."),
+            (["--flap", "1"], "Exhaust flap request accepted by DME."),
+        ]:
+            with self.subTest(args=args):
+                r = self.disconnected("bootmod3", args)
+                self.assertEqual(r.returncode, 0)
+                self.assertIn("transport: MOST", r.stderr)
+                self.assertEqual(r.stdout.strip(), message)
+
+    def test_bootmod3_blocks_unknown_rom(self):
+        r = self.disconnected("bootmod3", ["--map", "2"], "bm3-unknown")
+        self.assertEqual(r.stdout.strip(), "Bootmod3 CustomROM could not be verified.")
+
+    def test_bootmod3_burbles_requires_hsfz(self):
+        r = self.disconnected("bootmod3", ["--burbles", "2"])
+        self.assertEqual(r.stdout.strip(), "Burble presets require the HSFZ gateway.")
+        self.assertNotIn("FAKE-MOST bind", r.stderr)
+
+    def test_integrated_exhaust_fallback(self):
+        for mode, label in enumerate(("auto", "open", "closed")):
+            with self.subTest(mode=mode):
+                r = self.disconnected("exhaust-flap", ["--flap", str(mode)])
+                self.assertEqual(r.returncode, 0)
+                self.assertIn("transport: MOST", r.stderr)
+                self.assertEqual(r.stdout.strip(), f"Confirmed: Exhaust {label}")
+
+    def test_integrated_exhaust_reports_refusal(self):
+        r = self.disconnected("exhaust-flap", ["--flap", "1"], "mhd-refuse")
+        self.assertEqual(r.stdout.strip(), "Exhaust open refused by DME (NRC 31)")
+
+
 class MhdMostTest(unittest.TestCase):
     def test_mhd_most_confirmed(self):
         r = run("mhd-maps", ["--transport", "most", "--map", "2"], "up")

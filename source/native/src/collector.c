@@ -20,7 +20,7 @@ static unsigned number(const char *s, unsigned lo, unsigned hi) {
     return (unsigned)n;
 }
 
-#if defined(ENGINE_CODES_ONLY) || defined(MHD_MAPS_ONLY)
+#if defined(ENGINE_CODES_ONLY) || defined(MHD_MAPS_ONLY) || defined(EXHAUST_FLAP_ONLY)
 #include <fcntl.h>
 
 /* The result is out: end the plugin's pipe now, before the link's bounded close. */
@@ -33,8 +33,17 @@ static void result_done(void) {
 #endif
 
 #if defined(BM3_ONLY) || defined(XDRIVE_ONLY)
-/* These controls write to the DME and DSC and read ECUs never seen through the MOST tunnel, so they stay
- * on HSFZ. */
+#ifdef BM3_ONLY
+typedef struct diag_link *control_link;
+static int exchange(control_link link, unsigned ecu, const unsigned char *uds, unsigned uds_size,
+                    const unsigned char *prefix, unsigned prefix_size,
+                    unsigned char *reply, unsigned reply_size, unsigned timeout_ms,
+                    unsigned *negative) {
+    return diag_link_request(link, ecu, uds, uds_size, prefix, prefix_size, reply, reply_size,
+                             timeout_ms, negative);
+}
+#else
+/* The shared MOST tunnel cannot address DSC, EGS or the transfer case. */
 static void stop(int sig) { (void)sig; diag_running = 0; }
 static int connect_gw(const char *host, unsigned port) { return diag_hsfz_connect(host, port); }
 static int exchange(int fd, unsigned ecu, const unsigned char *uds, unsigned uds_size,
@@ -44,6 +53,7 @@ static int exchange(int fd, unsigned ecu, const unsigned char *uds, unsigned uds
     return diag_hsfz_exchange(fd, ecu, uds, uds_size, prefix, prefix_size, reply, reply_size,
                               timeout_ms, negative);
 }
+#endif
 #include <ctype.h>
 #include "controls.c"
 #elif defined(ENGINE_CODES_ONLY)
@@ -129,6 +139,56 @@ int main(int argc, char **argv) {
         return 0;
     }
     fault_codes(&link,mode==2);
+    result_done();
+    diag_link_close(&link);
+    return 0;
+}
+#elif defined(EXHAUST_FLAP_ONLY)
+int main(int argc, char **argv) {
+    const char *host = 0;
+    unsigned port = 6801, mode = 3, negative;
+    int i, n, transport = DIAG_AUTO;
+    struct diag_link link;
+    struct diag_link_cfg cfg;
+    static const unsigned char requests[][6] = {
+        {0x2f, 0x60, 0xfd, 0},
+        {0x2f, 0x60, 0xfd, 3, 0x14, 0xfe},
+        {0x2f, 0x60, 0xfd, 3, 0x23, 0x28}
+    };
+    static const char *labels[] = {"Exhaust auto", "Exhaust open", "Exhaust closed"};
+    const unsigned char prefix[] = {0x6f, 0x60, 0xfd};
+    unsigned char reply[64];
+
+    for (i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "--host") && i+1 < argc && !host) host = argv[++i];
+        else if (!strcmp(argv[i], "--port") && i+1 < argc) port = number(argv[++i], 1, 65535);
+        else if (!strcmp(argv[i], "--flap") && i+1 < argc && mode == 3) mode = number(argv[++i], 0, 2);
+        else if (!strcmp(argv[i], "--transport") && i+1 < argc && !strcmp(argv[i+1], "hsfz")) {
+            transport = DIAG_HSFZ; ++i;
+        } else if (!strcmp(argv[i], "--transport") && i+1 < argc && !strcmp(argv[i+1], "most")) {
+            transport = DIAG_MOST; ++i;
+        } else return 2;
+    }
+    if (mode == 3 || (!host && transport == DIAG_HSFZ)) return 2;
+    diag_link_signals();
+    memset(&cfg, 0, sizeof cfg);
+    cfg.host = host;
+    cfg.port = port;
+    cfg.transport = transport;
+    cfg.kind = DIAG_ONESHOT;
+    cfg.dsi_name = "exhaustflap";
+    diag_link_init(&link, &cfg);
+    if (!diag_link_reserve_oneshot(&link)) {
+        puts("Diagnostics busy. Wait a moment and try again.");
+        return 0;
+    }
+    if (diag_link_up(&link)) {
+        n = diag_link_request(&link, 0x12, requests[mode], mode ? 6u : 4u,
+                              prefix, sizeof prefix, reply, sizeof reply, 1600, &negative);
+        if (n >= 3) printf("Confirmed: %s\n", labels[mode]);
+        else if (n == -2) printf("%s refused by DME (NRC %02X)\n", labels[mode], negative);
+        else printf("%s: no DME reply\n", labels[mode]);
+    } else puts("Diagnostic gateway unavailable");
     result_done();
     diag_link_close(&link);
     return 0;

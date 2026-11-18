@@ -1,8 +1,8 @@
-/* Included by collector.c to share its bounded HSFZ exchange and gateway lease. */
+/* Included by collector.c for Bootmod3 and xDrive controls. */
 #ifdef BM3_ONLY
 #include "bm3_profiles.h"
 
-static int bm3_profile(int fd, unsigned char *reply) {
+static int bm3_profile(control_link fd, unsigned char *reply) {
     const unsigned char define[]={0x2c,2,0xf3,1,0x24,0x80,0x7f,0xfe,0x50,0,0xff};
     const unsigned char defined[]={0x6c,2,0xf3,1}, read[]={0x22,0xf3,1}, prefix[]={0x62,0xf3,1};
     unsigned negative, i;
@@ -29,7 +29,7 @@ static int bm3_profile(int fd, unsigned char *reply) {
     return matched;
 }
 
-static int write_memory(int fd, unsigned char sid, const unsigned char *address,
+static int write_memory(control_link fd, unsigned char sid, const unsigned char *address,
                        const unsigned char *bytes, unsigned size) {
     unsigned char req[31]={sid,0x14,address[0],address[1],address[2],address[3],(unsigned char)size};
     const unsigned char ack[]={ (unsigned char)(sid+0x40),0x3d };
@@ -39,7 +39,7 @@ static int write_memory(int fd, unsigned char sid, const unsigned char *address,
     return exchange(fd,0x12,req,7+size,ack,sid==0x3e?2:1,reply,sizeof reply,1600,&negative)>0;
 }
 
-static int verify_memory(int fd, const unsigned char *address, const unsigned char *bytes, unsigned size) {
+static int verify_memory(control_link fd, const unsigned char *address, const unsigned char *bytes, unsigned size) {
     const unsigned char req[]={0x23,0x14,address[0],address[1],address[2],address[3],(unsigned char)size};
     const unsigned char ack[]={0x63};
     unsigned char reply[32];
@@ -48,7 +48,7 @@ static int verify_memory(int fd, const unsigned char *address, const unsigned ch
            && !memcmp(reply+1,bytes,size);
 }
 
-static void control(int fd, const char *mode, unsigned value) {
+static void control(control_link fd, const char *mode, unsigned value) {
     unsigned char reply[512];
     unsigned negative;
     int profile=bm3_profile(fd,reply), n;
@@ -166,7 +166,9 @@ static void control(int fd, const char *mode, unsigned value) {
 
 int main(int argc,char **argv) {
     unsigned value, port=6801;
+#ifndef BM3_ONLY
     int fd,lock;
+#endif
     if ((argc!=5 && argc!=7) || strcmp(argv[1],"--host")) return 2;
     if (argc==7) {
         if (strcmp(argv[5],"--port")) return 2;
@@ -179,6 +181,27 @@ int main(int argc,char **argv) {
 #endif
     value=number(argv[4],0,!strcmp(argv[3],"--map") ? 4 : !strcmp(argv[3],"--flap") ? 2 : !strcmp(argv[3],"--burbles") ? 3 : 1);
     if (!strcmp(argv[3],"--map") && !value) return 2;
+#ifdef BM3_ONLY
+    struct diag_link link;
+    struct diag_link_cfg cfg;
+    const int burbles = !strcmp(argv[3], "--burbles");
+    diag_link_signals();
+    memset(&cfg, 0, sizeof cfg);
+    cfg.host = argv[2];
+    cfg.port = port;
+    cfg.transport = burbles ? DIAG_HSFZ : DIAG_AUTO;
+    cfg.kind = DIAG_ONESHOT;
+    cfg.dsi_name = "bootmod3";
+    diag_link_init(&link, &cfg);
+    if (!diag_link_reserve_oneshot(&link)) {
+        puts("Diagnostics busy. Try again.");
+        return 0;
+    }
+    if (diag_link_up(&link)) control(&link, argv[3], value);
+    else if (burbles) puts("Burble presets require the HSFZ gateway.");
+    else puts("Diagnostic gateway unavailable.");
+    diag_link_close(&link);
+#else
     signal(SIGINT,stop); signal(SIGTERM,stop); signal(SIGPIPE,SIG_IGN);
     lock=reserve_gateway();
     if (lock<0) { puts("Diagnostics busy. Try again."); return 0; }
@@ -186,5 +209,6 @@ int main(int argc,char **argv) {
     if (fd>=0) { control(fd,argv[3],value); close(fd); }
     else puts("Diagnostic gateway unavailable.");
     close(lock);
+#endif
     return 0;
 }

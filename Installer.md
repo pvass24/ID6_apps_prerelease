@@ -1,6 +1,6 @@
 # ID6Apps Desktop Installer (beta)
 
-Download the [installer release](https://github.com/inotbarnacle/ID6_apps_prerelease/releases/tag/installer-v0.7.0). The macOS app supports Apple silicon and Intel Macs. On Windows, open the x64 folder for Intel or AMD PCs, or the ARM64 folder for Windows on ARM.
+Download the [installer release](https://github.com/inotbarnacle/ID6_apps_prerelease/releases). The macOS app supports Apple silicon and Intel Macs. On Windows, open the x64 folder for Intel or AMD PCs, or the ARM64 folder for Windows on ARM.
 
 ## Enable temporary SSH first
 
@@ -12,7 +12,7 @@ Download the [installer release](https://github.com/inotbarnacle/ID6_apps_prerel
 
 1. Unzip the download and open **ID6Apps Installer**. It opens a page in your browser on the local computer.
 2. Choose the adapter. Leave the head unit IP blank for automatic discovery. Enter the IP in **Connection settings** if you know it or discovery fails. The installer uses the default SSH password.
-3. Select the menus you want. Choose MHD+ Suite, Bootmod3 Suite, or no tuning suite. xDrive Control is experimental and depends on the DSC controller.
+3. Select the menus you want. Choose MHD+ Suite, Bootmod3 Suite, or no tuning suite. xDrive Control is experimental and depends on the DSC controller. Road Jet and BEAMer require a 1280 × 480 display.
 4. Choose **Check compatibility**. Verify the SSH fingerprint for your head unit when prompted. A successful check reports the exact matched firmware, display size, and diagnostic gateway. See the [compatibility matrix](source/docs/COMPATIBILITY.md) for the evidence behind each profile.
 5. Choose **Install selected menus**. Wait for verification and record the backup path. Restart iDrive while parked, then open the menus under **My Vehicle**.
 
