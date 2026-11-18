@@ -9,4 +9,4 @@ static const unsigned kMarkBase = 55920u;
 static const unsigned kShiftOff = 55914u;
 static const unsigned kShiftOn = 55915u;
 static const unsigned kDefaultTarget = 3u;
-static const unsigned kShiftTargets[] = {5800, 6000, 6250, 6500, 6700};
+static const unsigned kShiftTargets[] = {6200, 6500, 6700, 7000, 7200};
