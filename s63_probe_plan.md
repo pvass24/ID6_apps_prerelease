@@ -55,6 +55,75 @@ Source: [Nekocorp S63 PID database](https://git.nekocorp.fr/leo/bmw_pid_data/src
 5. **Lambda probe is raw voltage** (4702) not direct lambda (5889). Need to convert: V → lambda via Nernst equation, or just display voltage.
 6. **Engine power is available** (DID 4520) — could add a kW/hp gauge!
 
+## M Performance App — Speed & G-Force Probes
+
+### High-Resolution Speed (for accurate 0-60 timing)
+```bash
+python3 tools/probe_signals.py \
+  --local 169.254.10.2 \
+  --gateway 169.254.10.3 \
+  --ecu 12 \
+  224682 224807 22480B
+```
+| DID | What | Why |
+|-----|------|-----|
+| 4682 | Gearbox speed sensor (RPM × 0.5) | Convert via gear ratio → high-res speed |
+| 4807 | Engine RPM (× 0.25) | Higher-res than OBD 01 0C |
+| 480B | Accelerator pedal (%) | Launch detection |
+
+### G-Force / Acceleration Sensors
+The DSC module has lateral + longitudinal accelerometers. Try reading from the DME first (some BMWs relay accel data through CDS), then probe DSC directly.
+
+```bash
+# DME — check if accel data is relayed
+python3 tools/probe_signals.py \
+  --local 169.254.10.2 \
+  --gateway 169.254.10.3 \
+  --ecu 12 \
+  224520 224536 22480D 22480E
+```
+| DID | What | Why |
+|-----|------|-----|
+| 4520 | Effective engine power | Real-time kW gauge |
+| 4536 | Boost control difference bank 1 | Boost leak detection |
+| 480D | Longitudinal road slope (estimated) | If this works, DME has accel data |
+| 480E | Quality of slope estimate | Validates above |
+
+```bash
+# DSC module (ECU 0x28) — direct acceleration sensors
+# NOTE: The DSC ECU address on the F90 may differ. Try 0x28 first.
+python3 tools/probe_signals.py \
+  --local 169.254.10.2 \
+  --gateway 169.254.10.3 \
+  --ecu 28 \
+  220001 220002 220003 220004
+```
+If ECU 28 doesn't respond, try without the probe tool and check what ECUs are on the bus. The xDrive Control app uses DSC at a known address — check the xdrive.c source for the ECU address it targets.
+
+### Wheel Speed Sensors (highest-res speed data)
+```bash
+# Individual wheel speeds may be available from DSC
+python3 tools/probe_signals.py \
+  --local 169.254.10.2 \
+  --gateway 169.254.10.3 \
+  --ecu 28 \
+  220100 220101 220102 220103
+```
+If wheel speeds are readable, this gives us 4 independent high-resolution speed measurements — the best possible data for timing.
+
+### What Each Result Means for the M Performance App
+
+| If this responds... | Impact |
+|---------------------|--------|
+| DID 4682 (trans speed) | 0-60 accuracy improves to ±0.1s |
+| DID 4520 (engine power) | Add real-time kW/HP gauge |
+| DSC lateral accel | Full friction circle enabled |
+| DSC longitudinal accel | Factory-grade G readings |
+| Wheel speeds | Best possible speed data for all timing |
+| None of the above | Fall back to OBD speed, times shown as "EST" |
+
+---
+
 ## Probe Commands (When at the Car)
 
 ### Step 1: Verify Known S63 DIDs
