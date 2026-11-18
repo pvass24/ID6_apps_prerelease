@@ -230,6 +230,29 @@ python3 tools/probe_signals.py \
 
 ---
 
+## Performance & Stability
+
+### HMI Refresh Rate: 10fps
+The iDrive 6 HMI redraws the screen at **10 frames per second** regardless of how fast gauge data is pushed ([source: developer comment, issue #27](https://github.com/inotbarnacle/ID6_apps_prerelease/issues/27)). This means:
+- 256-step and 64-step arcs look identical at 10fps playback
+- **Tier 2 (64 steps) is the practical sweet spot** — smooth at the actual refresh rate without the memory overhead of Tier 3
+- Don't waste RAM on 256 steps unless you're future-proofing for a faster renderer
+
+### Visibility-Based Polling (PR #50)
+Our fork includes the [PR #50 fix](https://github.com/inotbarnacle/ID6_apps_prerelease/pull/50): BoostDeck and ShiftDeck **stop polling when you navigate away** from their screen. This is critical for our larger arc PNGs — without it, the plugin keeps swapping 260×260 images in the background, wasting memory. When you return to the app, polling restarts instantly.
+
+### NBT-AAD (Android Auto) Conflict
+If you have aftermarket Android Auto (NBTAAD) installed on your head unit, it may cause BoostDeck to freeze ([issue #27](https://github.com/inotbarnacle/ID6_apps_prerelease/issues/27)). The system profiler script checks for this. If NBTAAD is running, stop it before using custom apps.
+
+### RAM
+The developer's personal unit has **2GB RAM** (described as "low ram"). Most NBT Evo units have 2-4GB. The profiler script reports your exact amount. ZIP size recommendations:
+
+| RAM | Recommended Tier | ZIP Size |
+|-----|-----------------|----------|
+| 4GB+ | Tier 2 (64 steps) | 14 MB |
+| 2GB | Tier 2 (64 steps) | 14 MB |
+| 1GB | Tier 1 (32 steps) | 7 MB |
+
 ## Known Issues
 
 | Issue | Severity | Status |
@@ -237,7 +260,8 @@ python3 tools/probe_signals.py \
 | 1440×540 layout clipping | Medium | Fixed — use `_1440` XML files |
 | Speed-lock (apps lock while driving) | Medium | Unknown on F90 US-market — test at car |
 | S63 gauge values blank | Expected | Need to probe and port S63 DIDs |
-| 69MB asset ZIP may not load | Medium | Tiered approach: start at 7MB (Tier 1) |
+| HMI refresh rate 10fps | Info | 64-step Tier 2 is the practical sweet spot |
+| NBTAAD conflict | Medium | Profiler checks for it; stop NBTAAD if present |
 | HUD compatibility on F90 | Unknown | F3X only tested — probe at car |
 | Split-node head unit | Low | Capture script auto-detects |
 
